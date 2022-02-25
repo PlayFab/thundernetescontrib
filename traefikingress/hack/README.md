@@ -1,0 +1,1 @@
+This folder contains YAML files for Traefik IngressRoute, Middleware and Kubernetes services.

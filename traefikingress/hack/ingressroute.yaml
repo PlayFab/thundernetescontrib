@@ -1,0 +1,15 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: gameserverbuild-sample-netcore-odkyq
+spec:
+  entryPoints:
+    - web
+  routes:
+  - kind: Rule
+    middlewares:
+    - name: test-stripprefixregex
+    match: Host(`thundernetesnoip.westus2.cloudapp.azure.com`) && PathPrefix(`/gameserverbuild-sample-netcore-odkyq`)
+    services:
+    - name: gameserverbuild-sample-netcore-odkyq
+      port: 80
