@@ -108,11 +108,12 @@ func allocate(sessionID uuid.UUID) (int, error) {
 	})
 	postBodyBytes := bytes.NewBuffer(postBody)
 	resp, err := client.Post(fmt.Sprintf("http://%s:5000/api/v1/allocate", IP), "application/json", postBodyBytes)
+	defer resp.Body.Close()
 	//Handle Error
 	if err != nil {
 		return -1, err
 	}
-	defer resp.Body.Close()
+	
 	if resp.StatusCode != http.StatusOK {
 		return resp.StatusCode, fmt.Errorf("%s %d", invalidStatusCode, resp.StatusCode)
 	}
