@@ -122,22 +122,21 @@ func (r *GameServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func getPortDetails(ctx context.Context, gs *mpsv1alpha1.GameServer, pte mpsv1alpha1.PortToExpose) *corev1.ServicePort {
+func getPortDetails(ctx context.Context, gs *mpsv1alpha1.GameServer, pte int32) *corev1.ServicePort {
 	log := log.FromContext(ctx)
 	for _, container := range gs.Spec.Template.Spec.Containers {
-		if pte.ContainerName == container.Name {
-			for _, port := range container.Ports {
-				if port.Protocol == corev1.ProtocolUDP {
-					log.Info("UDP ports are not supported - skipping")
-					continue
-				}
-				if port.Name == pte.PortName {
-					return &corev1.ServicePort{
-						Name:     pte.PortName,
-						Port:     port.ContainerPort,
-						Protocol: port.Protocol,
-					}
-				}
+		for _, port := range container.Ports {
+			if port.ContainerPort != pte {
+				continue
+			}
+			if port.Protocol == corev1.ProtocolUDP {
+				log.Info("UDP ports are not supported - skipping")
+				continue
+			}
+			return &corev1.ServicePort{
+				Name:     port.Name,
+				Port:     port.ContainerPort,
+				Protocol: port.Protocol,
 			}
 		}
 	}
