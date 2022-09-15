@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: autoallocate
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: autoallocate
+            image: curlimages/curl:7.85.0
+            imagePullPolicy: IfNotPresent
+            command: ["/bin/sh", "-c"]
+            args: # for loop uses the alpine syntax, /proc/sys/kernel/random/uuid is used instead of uuidgen
+            - |
+             for i in $(seq 30); do SESSION_ID=$(cat /proc/sys/kernel/random/uuid); curl -H 'Content-Type: application/json' -d '{"buildID":"85ffe8da-c82f-4035-86c5-9d2b5f42d6f6","sessionID":"'${SESSION_ID}'"}' http://thundernetes-controller-manager.thundernetes-system.svc.cluster.local:5000/api/v1/allocate; done
+          restartPolicy: Never
+          
