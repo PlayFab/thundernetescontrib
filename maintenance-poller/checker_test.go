@@ -29,7 +29,7 @@ func Test(t *testing.T) {
 		notifier := MockMaintenanceNotifier{}
 		checker := NewChecker(client, notifier)
 
-		err := checker.Check(context.TODO())
+		_, err := checker.Check(context.TODO(), -1)
 
 		if err != nil {
 			t.Fatalf("not expected")

@@ -9,22 +9,26 @@ import (
 type Checker struct {
 	client   MetadataClient
 	notifier MaintenanceNotifier
+	lastDocumentIncarnation int
 }
 
 func NewChecker(client MetadataClient, notifier MaintenanceNotifier) *Checker {
 	checker := new(Checker)
 	checker.client = client
 	checker.notifier = notifier
+	checker.lastDocumentIncarnation = -1
 	return checker
 }
 
 func (c Checker) Start(ctx context.Context) {
+	lastDocumentIncarnation := -1
+	var err error
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			err := c.Check(ctx)
+			lastDocumentIncarnation, err = c.Check(ctx, lastDocumentIncarnation)
 
 			if err != nil {
 				fmt.Println(err.Error())
@@ -38,28 +42,27 @@ func (c Checker) Start(ctx context.Context) {
 	}
 }
 
-func (c Checker) Check(ctx context.Context) error {
+func (c Checker) Check(ctx context.Context, lastDocumentIncarnation int) (int, error) {
 	scheduledEvent, err := c.client.GetScheduledEvents()
 	if err != nil {
-		return err
+		return lastDocumentIncarnation, err
 	}
-	fmt.Println(scheduledEvent.DocumentIncarnation)
 
-	// TODO: notify only if doc incarnation has changed since last check
-	if len(scheduledEvent.Events) > 0 {
-		err = c.notifier.Notify(ctx)
-		if err != nil {
-			return err
+	if (lastDocumentIncarnation != scheduledEvent.DocumentIncarnation) {
+		if len(scheduledEvent.Events) > 0 {
+			err = c.notifier.Notify(ctx)
+			if err != nil {
+				return scheduledEvent.DocumentIncarnation, err
+			}
+		}
+	
+		for _, event := range scheduledEvent.Events {
+			_, err := c.client.ConfirmScheduledEvent(event.EventID)
+			if err != nil {
+				return scheduledEvent.DocumentIncarnation, err
+			}
 		}
 	}
 
-	for _, event := range scheduledEvent.Events {
-		statusCode, err := c.client.ConfirmScheduledEvent(event.EventID)
-		fmt.Println(statusCode)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return scheduledEvent.DocumentIncarnation, nil
 }

@@ -17,6 +17,8 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
+const apiGroup = "/apis/mps.playfab.com/v1alpha1";
+
 type MaintenanceNotifier interface {
 	Notify(ctx context.Context) error
 }
@@ -87,7 +89,7 @@ func (n KubernetesMaintenanceNotifier) Notify(ctx context.Context) error {
 	}
 
 	var gameServers mpsv1alpha1.GameServerList
-	err = n.clientset.RESTClient().Get().AbsPath("/apis/mps.playfab.com/v1alpha1").Resource("gameservers").Namespace("default").Do(ctx).Into(&gameServers)
+	err = n.clientset.RESTClient().Get().AbsPath(apiGroup).Resource("gameservers").Namespace("default").Do(ctx).Into(&gameServers)
 	if err != nil {
 		return err
 	}
@@ -98,7 +100,7 @@ func (n KubernetesMaintenanceNotifier) Notify(ctx context.Context) error {
 			// standBy = append(standBy, gs)
 
 			// kubectl delete gameserver x -n default
-			err = n.clientset.RESTClient().Delete().AbsPath("/apis/mps.playfab.com/v1alpha1").Resource("gameservers").Namespace("default").Name(gs.Name).Do(ctx).Error()
+			err = n.clientset.RESTClient().Delete().AbsPath(apiGroup).Resource("gameservers").Namespace("default").Name(gs.Name).Do(ctx).Error()
 			if err != nil {
 				return err
 			}
@@ -110,11 +112,11 @@ func (n KubernetesMaintenanceNotifier) Notify(ctx context.Context) error {
 
 // m.updateNodeIsUnschedulable(ctx, true) = kubectl cordon
 // m.updateNodeIsUnschedulable(ctx, false) = kubectl uncordon
-func (n KubernetesMaintenanceNotifier) UpdateNodeIsUnschedulable(ctx context.Context, value bool) error {
+func (n KubernetesMaintenanceNotifier) UpdateNodeIsUnschedulable(ctx context.Context, markUnschedulable bool) error {
 	payload := []patchStringValue{{
 		Op:    "replace",
 		Path:  "/spec/unschedulable",
-		Value: value,
+		Value: markUnschedulable,
 	}}
 	payloadBytes, _ := json.Marshal(payload)
 	_, err := n.clientset.CoreV1().Nodes().Patch(ctx, n.nodeName, types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
