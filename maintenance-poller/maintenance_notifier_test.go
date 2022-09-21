@@ -17,7 +17,7 @@ func TestNotifier(t *testing.T) {
 			t.Fatalf("not expected")
 		}
 
-		// clean
+		// clean up, make the node schedulable again
 		notifier.UpdateNodeIsUnschedulable(context.TODO(), false)
 	})
 }
