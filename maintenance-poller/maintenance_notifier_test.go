@@ -18,6 +18,6 @@ func TestNotifier(t *testing.T) {
 		}
 
 		// clean up, make the node schedulable again
-		notifier.UpdateNodeIsUnschedulable(context.TODO(), false)
+		notifier.ToggleNodeUnschedulable(context.TODO(), false)
 	})
 }

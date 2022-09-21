@@ -17,7 +17,7 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-const apiGroup = "/apis/mps.playfab.com/v1alpha1";
+const apiGroup = "/apis/mps.playfab.com/v1alpha1"
 
 type MaintenanceNotifier interface {
 	Notify(ctx context.Context) error
@@ -28,6 +28,12 @@ type KubernetesMaintenanceNotifier struct {
 	nodeName  string
 }
 
+// NewInClusterKubernetesMaintenanceNotifier will create an in-cluster Kubernetes client.
+// It will set the node name based on the NODE_NAME environment variable, therefore that must be set.
+//
+// For more information see [In-cluster example]
+//
+// [In-cluster example]: https://github.com/kubernetes/client-go/tree/master/examples/in-cluster-client-configuration
 func NewInClusterKubernetesMaintenanceNotifier() KubernetesMaintenanceNotifier {
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -50,6 +56,12 @@ func NewInClusterKubernetesMaintenanceNotifier() KubernetesMaintenanceNotifier {
 	return k
 }
 
+// NewOutOfClusterKubernetesMaintenanceNotifier will create an out-of-cluster Kubernetes client.
+// It will set the node name based on the nodeName argument.
+//
+// For more information see [Out-of-cluster example]
+//
+// [Out-of-cluster example]: https://github.com/kubernetes/client-go/tree/master/examples/out-of-cluster-client-configuration
 func NewOutOfClusterKubernetesMaintenanceNotifier(nodeName string) KubernetesMaintenanceNotifier {
 	var kubeconfig *string
 	if home := homedir.HomeDir(); home != "" {
@@ -82,8 +94,11 @@ func (n KubernetesMaintenanceNotifier) GetClientSet() *kubernetes.Clientset {
 	return n.clientset
 }
 
+// Notify marks the node as unschedulable (equivalent to kubectl uncordon), so no more GameServers are scheduled.
+// It also deletes any non-Active GameServers in that node so they are not allocated.
+// An equal number of GameServers will be created in nodes which are not in maintenance.
 func (n KubernetesMaintenanceNotifier) Notify(ctx context.Context) error {
-	err := n.UpdateNodeIsUnschedulable(ctx, true)
+	err := n.ToggleNodeUnschedulable(ctx, true)
 	if err != nil {
 		return err
 	}
@@ -94,12 +109,8 @@ func (n KubernetesMaintenanceNotifier) Notify(ctx context.Context) error {
 		return err
 	}
 
-	// standBy := []mpsv1alpha1.GameServer{}
 	for _, gs := range gameServers.Items {
 		if gs.Status.NodeName == n.nodeName && gs.Status.State == mpsv1alpha1.GameServerStateStandingBy {
-			// standBy = append(standBy, gs)
-
-			// kubectl delete gameserver x -n default
 			err = n.clientset.RESTClient().Delete().AbsPath(apiGroup).Resource("gameservers").Namespace("default").Name(gs.Name).Do(ctx).Error()
 			if err != nil {
 				return err
@@ -110,9 +121,11 @@ func (n KubernetesMaintenanceNotifier) Notify(ctx context.Context) error {
 	return nil
 }
 
-// m.updateNodeIsUnschedulable(ctx, true) = kubectl cordon
-// m.updateNodeIsUnschedulable(ctx, false) = kubectl uncordon
-func (n KubernetesMaintenanceNotifier) UpdateNodeIsUnschedulable(ctx context.Context, markUnschedulable bool) error {
+// ToggleNodeUnschedulable will mark a node as schedulable or unschedulable depending on the markUnschedulable flag.
+//
+//	ToggleNodeUnschedulable(ctx, true) = kubectl cordon
+//	ToggleNodeUnschedulable(ctx, false) = kubectl uncordon
+func (n KubernetesMaintenanceNotifier) ToggleNodeUnschedulable(ctx context.Context, markUnschedulable bool) error {
 	payload := []patchStringValue{{
 		Op:    "replace",
 		Path:  "/spec/unschedulable",

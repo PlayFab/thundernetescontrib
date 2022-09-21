@@ -6,10 +6,10 @@ import (
 )
 
 type MockMetadataClient struct {
-	mockedScheduledEvent ScheduledEvent
+	mockedScheduledEvent ScheduledEventsBatch
 }
 
-func (c MockMetadataClient) GetScheduledEvents() (ScheduledEvent, error) {
+func (c MockMetadataClient) GetScheduledEvents() (ScheduledEventsBatch, error) {
 	return c.mockedScheduledEvent, nil
 }
 

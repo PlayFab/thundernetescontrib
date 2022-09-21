@@ -4,7 +4,7 @@ type EventStatus string
 
 const (
 	Scheduled EventStatus = "Scheduled"
-	Started               = "Started"
+	Started   EventStatus = "Started"
 )
 
 type ResourceType string
@@ -17,20 +17,20 @@ type EventType string
 
 const (
 	Freeze    EventType = "Freeze"
-	Reboot              = "Reboot"
-	Redeploy            = "Redeploy"
-	Preempt             = "Preempt"
-	Terminate           = "Terminate"
+	Reboot    EventType = "Reboot"
+	Redeploy  EventType = "Redeploy"
+	Preempt   EventType = "Preempt"
+	Terminate EventType = "Terminate"
 )
 
 type EventSource string
 
 const (
 	Platform EventSource = "Platform"
-	User                 = "User"
+	User     EventSource = "User"
 )
 
-type ScheduledEvent struct {
+type ScheduledEventsBatch struct {
 	DocumentIncarnation int `json:"DocumentIncarnation"`
 	Events              []struct {
 		EventID           string       `json:"EventId"`
@@ -54,7 +54,7 @@ type StartRequest struct {
 }
 
 type patchStringValue struct {
-    Op    string `json:"op"`
-    Path  string `json:"path"`
-    Value bool `json:"value"`
+	Op    string `json:"op"`
+	Path  string `json:"path"`
+	Value bool   `json:"value"`
 }

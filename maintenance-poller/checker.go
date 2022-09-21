@@ -7,19 +7,24 @@ import (
 )
 
 type Checker struct {
-	client   MetadataClient
-	notifier MaintenanceNotifier
-	lastDocumentIncarnation int
+	client                  MetadataClient
+	notifier                MaintenanceNotifier
 }
 
 func NewChecker(client MetadataClient, notifier MaintenanceNotifier) *Checker {
 	checker := new(Checker)
 	checker.client = client
 	checker.notifier = notifier
-	checker.lastDocumentIncarnation = -1
 	return checker
 }
 
+// Start will create a polling mechanism in the form of an infinite loop, with each iteration ocurring in a fixed period of time.
+
+// For more information, see [Azure Docs].
+// Most events have 5 to 15 minutes of advance notice, although in some cases advance notice might be as little as 30 seconds.
+// To ensure that there is enough time to take mitigating actions, it is recommended that polling is done once per second.
+//
+// [Azure Docs]: https://learn.microsoft.com/en-us/azure/virtual-machines/linux/scheduled-events#polling-frequency
 func (c Checker) Start(ctx context.Context) {
 	lastDocumentIncarnation := -1
 	var err error
@@ -35,34 +40,34 @@ func (c Checker) Start(ctx context.Context) {
 			}
 		}
 
-		// https://learn.microsoft.com/en-us/azure/virtual-machines/linux/scheduled-events#polling-frequency
-		// Most events have 5 to 15 minutes of advance notice, although in some cases advance notice might be as little as 30 seconds.
-		// To ensure that you have as much time as possible to take mitigating actions, we recommend that you poll the service once per second.
 		time.Sleep(1 * time.Second)
 	}
 }
 
+// Check retrieves maintenence scheduled events, takes appropriate action in case there is a new batch of events and confirms the events.
+// Each batch of events is versioned with a DocumentIncarnation int value. So, in order to prevent processing the same batch
+// multiple times, the lastDocumentIncarnation is compared with the new value retrieved and action is taken only if the values differ.
 func (c Checker) Check(ctx context.Context, lastDocumentIncarnation int) (int, error) {
-	scheduledEvent, err := c.client.GetScheduledEvents()
+	scheduledEventsBatch, err := c.client.GetScheduledEvents()
 	if err != nil {
 		return lastDocumentIncarnation, err
 	}
 
-	if (lastDocumentIncarnation != scheduledEvent.DocumentIncarnation) {
-		if len(scheduledEvent.Events) > 0 {
+	if lastDocumentIncarnation != scheduledEventsBatch.DocumentIncarnation {
+		if len(scheduledEventsBatch.Events) > 0 {
 			err = c.notifier.Notify(ctx)
 			if err != nil {
-				return scheduledEvent.DocumentIncarnation, err
+				return scheduledEventsBatch.DocumentIncarnation, err
 			}
 		}
-	
-		for _, event := range scheduledEvent.Events {
+
+		for _, event := range scheduledEventsBatch.Events {
 			_, err := c.client.ConfirmScheduledEvent(event.EventID)
 			if err != nil {
-				return scheduledEvent.DocumentIncarnation, err
+				return scheduledEventsBatch.DocumentIncarnation, err
 			}
 		}
 	}
 
-	return scheduledEvent.DocumentIncarnation, nil
+	return scheduledEventsBatch.DocumentIncarnation, nil
 }

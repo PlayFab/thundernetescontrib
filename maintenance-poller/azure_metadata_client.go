@@ -7,7 +7,13 @@ import (
 )
 
 type MetadataClient interface {
-	GetScheduledEvents() (ScheduledEvent, error)
+	// GetScheduledEvents retrieves a batch of new scheduled maintenence events
+	GetScheduledEvents() (ScheduledEventsBatch, error)
+
+	// ConfirmScheduledEvent approves a scheduled maintenence event using its eventId identifier.
+	// This call indicates that the minimum notification time for an event can be shortened (when possible).
+	// The event may not start immediately upon approval, in some cases requiring the approval of all the VMs
+	// hosted on the node before proceeding with the event.
 	ConfirmScheduledEvent(eventId string) (statusCode int, err error)
 }
 
@@ -21,12 +27,12 @@ func NewAzureMetadataClient() *AzureMetadataClient {
 	return &c
 }
 
-func (c AzureMetadataClient) GetScheduledEvents() (ScheduledEvent, error) {
-	scheduledEvent := ScheduledEvent{}
+func (c AzureMetadataClient) GetScheduledEvents() (ScheduledEventsBatch, error) {
+	scheduledEventsBatch := ScheduledEventsBatch{}
 
 	req, err := http.NewRequest("GET", "http://169.254.169.254/metadata/scheduledevents", nil)
 	if err != nil {
-		return scheduledEvent, err
+		return scheduledEventsBatch, err
 	}
 
 	q := req.URL.Query()
@@ -37,14 +43,14 @@ func (c AzureMetadataClient) GetScheduledEvents() (ScheduledEvent, error) {
 
 	res, err := c.client.Do(req)
 	if err != nil {
-		return scheduledEvent, err
+		return scheduledEventsBatch, err
 	}
 
 	defer res.Body.Close()
 
-	err = json.NewDecoder(res.Body).Decode(&scheduledEvent)
+	err = json.NewDecoder(res.Body).Decode(&scheduledEventsBatch)
 
-	return scheduledEvent, err
+	return scheduledEventsBatch, err
 }
 
 func (c AzureMetadataClient) ConfirmScheduledEvent(eventId string) (statusCode int, err error) {
