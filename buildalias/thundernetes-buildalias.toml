@@ -1,0 +1,17 @@
+[[alias]]
+
+[[alias.sampleAlias]]
+buildId = "85ffe8da-c82f-4035-86c5-9d2b5f42d6f6"
+weight = 80
+
+[[alias.sampleAlias]]
+buildId = "85ffe8da-c82f-4035-86c5-9d2b5f42d6f7"
+weight = 81
+
+[[alias.sampleAlias]]
+buildId = "85ffe8da-c82f-4035-86c5-9d2b5f42d6f8"
+weight = 82
+
+[[alias.sampleAlias]]
+buildId = "85ffe8da-c82f-4035-86c5-9d2b5f42d6f9"
+weight = 83
